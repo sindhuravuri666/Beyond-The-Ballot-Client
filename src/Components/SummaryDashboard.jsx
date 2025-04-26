@@ -1,41 +1,108 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
-const COLORS = {
-  positive: "#22c55e", // green-500
-  negative: "#ef4444", // red-500
-  neutral: "#3b82f6", // blue-500
-};
+const COLORS = ["#34d399", "#60a5fa", "#f87171"]; // green, blue, red for positive, neutral, negative
 
-export default function SummaryDashboard() {
-  const [data, setData] = useState(null);
+const SummaryDashboard = () => {
+  const [summaryData, setSummaryData] = useState(null);
 
   useEffect(() => {
-    axios
-      .get("http://127.0.0.1:8000/get_summary")
-      .then((res) => setData(res.data))
-      .catch((err) => console.error("Error loading summary:", err));
+    const fetchSummary = async () => {
+      try {
+        const response = await axios.get(
+          "https://beyond-the-ballot-server.onrender.com/get_summary"
+        );
+        setSummaryData(response.data);
+      } catch (error) {
+        console.error("Error fetching summary:", error);
+      }
+    };
+
+    fetchSummary();
   }, []);
 
-  if (!data) return <p className="text-gray-500 mt-6">Loading summary...</p>;
-  if (data.error) return <p className="text-red-500 mt-6">{data.error}</p>;
+  if (!summaryData) {
+    return (
+      <div className="text-white flex items-center justify-center min-h-screen">
+        Loading Dashboard...
+      </div>
+    );
+  }
 
-  const chartData = Object.entries(data.summary).map(([key, value]) => ({
-    name: key,
-    value,
+  const { summary, total, preview } = summaryData;
+
+  const chartData = Object.entries(summary).map(([sentiment, count]) => ({
+    name: sentiment,
+    value: count,
   }));
 
-  return (
-    <div className="bg-white rounded-xl mt-10 p-6 shadow-lg text-gray-800 border border-gray-200">
-      <h2 className="text-2xl font-semibold mb-4 text-center">
-        📊 Sentiment Summary
-      </h2>
+  const sentimentPercentages = Object.entries(summary).map(
+    ([sentiment, count]) => ({
+      name: sentiment,
+      percentage: ((count / total) * 100).toFixed(1),
+    })
+  );
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 flex flex-col gap-8 items-center text-white">
+      {/* Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl">
+        <div className="bg-white text-gray-800 rounded-xl p-6 shadow-lg text-center">
+          <h2 className="text-2xl font-bold">Total Tweets</h2>
+          <p className="mt-2 text-4xl">{total}</p>
+        </div>
+        {sentimentPercentages.map((item, index) => (
+          <div
+            key={index}
+            className="bg-white text-gray-800 rounded-xl p-6 shadow-lg text-center"
+          >
+            <h2 className="text-2xl font-bold capitalize">{item.name}</h2>
+            <p className="mt-2 text-4xl">{item.percentage}%</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full max-w-6xl">
+        {/* Bar Chart */}
+        <div className="bg-white rounded-2xl p-6 shadow-lg">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Sentiment Distribution (Bar)
+          </h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData}>
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value">
+                {chartData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
         {/* Pie Chart */}
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="bg-white rounded-2xl p-6 shadow-lg">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Sentiment Proportion (Pie)
+          </h2>
+          <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
                 data={chartData}
@@ -43,54 +110,50 @@ export default function SummaryDashboard() {
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                outerRadius={80}
-                label={({ name, value }) => `${name} (${value})`}
+                outerRadius={100}
+                fill="#8884d8"
+                label
               >
-                {chartData.map((entry) => (
+                {chartData.map((entry, index) => (
                   <Cell
-                    key={entry.name}
-                    fill={COLORS[entry.name.toLowerCase()] || "#cccccc"}
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
                   />
                 ))}
               </Pie>
-              <Tooltip />
             </PieChart>
           </ResponsiveContainer>
         </div>
-
-        {/* Preview Table */}
-        <div>
-          <h3 className="font-semibold text-lg mb-2">🔍 Preview Samples</h3>
-          <ul className="space-y-2 text-sm">
-            {data.preview.map((item, idx) => (
-              <li
-                key={idx}
-                className="bg-gray-50 border border-gray-200 p-3 rounded-md flex justify-between items-start"
-              >
-                <span className="text-gray-700 max-w-xs truncate">
-                  📝 {item.Tweet}
-                </span>
-                <span
-                  className={`text-xs font-bold rounded-full px-3 py-1 ${
-                    item["Predicted Sentiment"] === "positive"
-                      ? "bg-green-100 text-green-600"
-                      : item["Predicted Sentiment"] === "negative"
-                      ? "bg-red-100 text-red-600"
-                      : "bg-blue-100 text-blue-600"
-                  }`}
-                >
-                  {item["Predicted Sentiment"]}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
 
-      <p className="mt-6 text-center text-sm text-gray-600">
-        Total Analyzed:{" "}
-        <span className="font-semibold text-gray-800">{data.total}</span>
-      </p>
+      {/* Preview Table */}
+      <div className="bg-white rounded-2xl p-6 shadow-lg w-full max-w-6xl">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">
+          Top Tweets Preview
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="min-w-full table-auto">
+            <thead>
+              <tr className="bg-gray-100 text-gray-700">
+                <th className="px-4 py-2 text-left">Tweet</th>
+                <th className="px-4 py-2 text-left">Predicted Sentiment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {preview.map((item, index) => (
+                <tr key={index} className="border-b border-gray-200">
+                  <td className="px-4 py-3 text-gray-700">{item.Tweet}</td>
+                  <td className="px-4 py-3 text-gray-700 capitalize">
+                    {item["Predicted Sentiment"]}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default SummaryDashboard;
