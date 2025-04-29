@@ -1,3 +1,4 @@
+import ComparisonDashboard from "./Components/ComparisionDashboard";
 import InputComponent from "./Components/InputComponent";
 import SummaryDashboard from "./Components/SummaryDashboard";
 
@@ -6,6 +7,7 @@ function App() {
     <>
       <InputComponent />
       <SummaryDashboard />
+      <ComparisonDashboard />
     </>
   );
 }

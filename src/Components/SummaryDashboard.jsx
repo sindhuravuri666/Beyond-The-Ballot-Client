@@ -16,13 +16,21 @@ const COLORS = ["#34d399", "#60a5fa", "#f87171"]; // green, blue, red for positi
 
 const SummaryDashboard = () => {
   const [summaryData, setSummaryData] = useState(null);
+  const [selectedRoute, setSelectedRoute] = useState("general"); // Default to general summary
 
   useEffect(() => {
     const fetchSummary = async () => {
+      let url;
+      if (selectedRoute === "modi") {
+        url = "https://beyond-the-ballot-server.onrender.com/get_summary_modi";
+      } else if (selectedRoute === "rahul") {
+        url = "https://beyond-the-ballot-server.onrender.com/get_summary_rahul";
+      } else {
+        url = "https://beyond-the-ballot-server.onrender.com/get_summary";
+      }
+
       try {
-        const response = await axios.get(
-          "https://beyond-the-ballot-server.onrender.com/get_summary"
-        );
+        const response = await axios.get(url);
         setSummaryData(response.data);
       } catch (error) {
         console.error("Error fetching summary:", error);
@@ -30,7 +38,7 @@ const SummaryDashboard = () => {
     };
 
     fetchSummary();
-  }, []);
+  }, [selectedRoute]);
 
   if (!summaryData) {
     return (
@@ -56,6 +64,19 @@ const SummaryDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 flex flex-col gap-8 items-center text-white">
+      {/* Dropdown to select route */}
+      <div className="mb-6">
+        <select
+          value={selectedRoute}
+          onChange={(e) => setSelectedRoute(e.target.value)}
+          className="p-2 rounded-lg bg-white text-gray-800"
+        >
+          <option value="general">General Summary</option>
+          <option value="modi">Modi's Tweets</option>
+          <option value="rahul">Rahul Gandhi's Tweets</option>
+        </select>
+      </div>
+
       {/* Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl">
         <div className="bg-white text-gray-800 rounded-xl p-6 shadow-lg text-center">
